@@ -74,4 +74,5 @@ def health(request: Request, db: Session = DB):
         pv = None
     return {"ok": True, "prompt_version": pv, "llm_provider": s.llm_provider, "model": s.llm_model,
             "gate_version": GATE_VERSION, "encryption_at_rest": bool(s.encryption_key),
-            "database": s.database_url.split("://")[0]}
+            "database": s.database_url.split("://")[0],
+            "secrets": getattr(s, "secrets_loaded", {})}  # labels only, never values

@@ -67,6 +67,7 @@ class JournalSession(Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    local_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD in the user's tz
     mode: Mapped[str] = mapped_column(String(16), default="write")
     mode_set_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     mode_set_by: Mapped[str | None] = mapped_column(String(8), nullable=True)  # user | model

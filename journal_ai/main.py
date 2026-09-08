@@ -3,6 +3,8 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
 from .db import init_db, session_scope
@@ -32,6 +34,12 @@ def create_app(provider: LLMProvider | None = None, *, init: bool = True) -> Fas
     app.state.lookback = LookbackService(p, ProvenanceGate(min_entries_for_pattern=s.lookback_min_entries_for_pattern))
     for r in ALL:
         app.include_router(r)
+    if s.frontend_dir.is_dir():
+        app.mount("/app", StaticFiles(directory=str(s.frontend_dir), html=True), name="frontend")
+
+        @app.get("/", include_in_schema=False)
+        def root():
+            return RedirectResponse("/app/")
     return app
 
 

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="JOURNAL_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="JOURNAL_", env_file=".env", extra="allow")
 
     # --- storage ---------------------------------------------------------
     database_url: str = f"sqlite:///{ROOT / 'journal.db'}"
@@ -20,14 +20,17 @@ class Settings(BaseSettings):
     encryption_key: str | None = None
 
     # --- LLM -------------------------------------------------------------
-    # "anthropic" | "openai" | "scripted" (tests) | "silent" (never produces a turn)
-    llm_provider: str = "scripted"
+    # "anthropic" | "openai" | "scripted" (tests) | "silent" (never produces a turn) | "auto"
+    # auto => anthropic if ANTHROPIC_API_KEY (env or secrets/) is present, else openai if OPENAI_API_KEY, else scripted
+    llm_provider: str = "auto"
     llm_model: str = "claude-sonnet-4-5"
     safety_model: str | None = None  # small model for the safety classifier; None => lexical only
     lookback_model: str | None = None  # defaults to llm_model
 
-    # --- prompts ---------------------------------------------------------
+    # --- prompts / secrets / frontend ------------------------------------
     prompts_dir: Path = ROOT / "prompts"
+    secrets_dir: Path = ROOT / "secrets"      # see journal_ai/secrets.py
+    frontend_dir: Path = ROOT / "frontend"    # served at /app when present
 
     # --- gates -----------------------------------------------------------
     style_hard_sentence_cap: int = 8
@@ -56,4 +59,23 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    import os
+
+    from .secrets import load_secrets
+
+    s = Settings()
+    s.secrets_loaded = load_secrets(s.secrets_dir)  # type: ignore[attr-defined]
+    if s.llm_provider == "auto":
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            s.llm_provider = "anthropic"
+        elif os.environ.get("OPENAI_API_KEY"):
+            s.llm_provider = "openai"
+            if s.llm_model.startswith("claude"):
+                s.llm_model = "gpt-4o"
+        else:
+            s.llm_provider = "scripted"
+    if s.admin_token is None and os.environ.get("JOURNAL_ADMIN_TOKEN"):
+        s.admin_token = os.environ["JOURNAL_ADMIN_TOKEN"]
+    if s.encryption_key is None and os.environ.get("JOURNAL_ENCRYPTION_KEY"):
+        s.encryption_key = os.environ["JOURNAL_ENCRYPTION_KEY"]
+    return s

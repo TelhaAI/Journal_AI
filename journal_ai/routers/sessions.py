@@ -42,7 +42,8 @@ async def post_turn(session_id: str, payload: TurnIn, request: Request, db: Sess
                     stream: bool = True):
     sess = _own_session(db, user_id, session_id)
     if sess.closed_at is not None:
-        raise HTTPException(status_code=409, detail="session is closed; submit a new entry to open one")
+        sess.closed_at = None  # the conversation under this page continues where it left off
+        db.flush()
     engine = request.app.state.engine
     local = payload.created_at_local.replace(tzinfo=None) if payload.created_at_local else \
         datetime.now(timezone.utc).replace(tzinfo=None)

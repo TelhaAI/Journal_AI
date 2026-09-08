@@ -61,7 +61,7 @@ class TurnEngine:
                 raise KeyError(volume_id)
         else:
             volume = S.current_volume(db, user_id, created_at_local, now)
-        session = S.get_or_open_session(db, user_id, volume, now, session_id)
+        session = S.get_or_open_session(db, user_id, volume, now, session_id, created_at_local.strftime("%Y-%m-%d"))
 
         if supersedes_entry_id:
             old = db.get(Entry, supersedes_entry_id)
@@ -91,6 +91,25 @@ class TurnEngine:
             return await self._write_path(db, user_id, volume, session, entry, decision, now)
         return await self._talk_path(db, user_id, volume, session, entry, decision, now)
 
+    async def respond_to_entry(self, db: Session, user_id: str, entry: Entry, *, mode: str | None,
+                               intent: str = "talk", now: datetime | None = None) -> TurnResult:
+        """Talk Back on an entry that already exists (the UI's "Talk back" button on a written page).
+        No new entry is created; the user's words are already the record."""
+        now = now or datetime.now(timezone.utc)
+        self._now = now
+        volume = db.get(Volume, entry.volume_id)
+        session = db.get(JournalSession, entry.session_id) if entry.session_id else None
+        if session is None:
+            session = S.get_or_open_session(db, user_id, volume, now)
+        elif session.closed_at is not None:
+            session.closed_at = None  # the conversation about this page continues where it left off
+        session.last_activity_at = now
+        verdict = await self.safety_gate.check(entry.body)
+        if verdict.risk:
+            return await self._safety_path(db, user_id, session, entry, verdict.source, now)
+        decision = M.apply_intent(session, intent, mode, now)
+        return await self._talk_path(db, user_id, volume, session, entry, decision, now)
+
     # ------------------------------------------------------------------ paths
     async def _safety_path(self, db, user_id, session, entry, source, now) -> TurnResult:
         pv = active_version(db)
@@ -105,6 +124,8 @@ class TurnEngine:
 
     async def _write_path(self, db, user_id, volume, session, entry, decision, now) -> TurnResult:
         s = self.settings
+        if entry.supersedes_entry_id:  # an edit of an existing page is not a new entry: stay silent
+            return TurnResult(entry, session, None, "write_silent", "write")
         policy = M.write_policy(entry.word_count, entry.body, session.silent_write_streak,
                                 min_words=s.write_min_words_for_response,
                                 streak_before_ack=s.write_silent_streak_before_ack)

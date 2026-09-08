@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./vendor/react.production.min.js"></script>
+<script src="./vendor/react-dom.production.min.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/modernist-4a3e21df-7d06-43b1-964e-1e924220894f/styles.css">
+  <script src="_ds/modernist-4a3e21df-7d06-43b1-964e-1e924220894f/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; min-height: 100vh; }
+    a { color: var(--color-accent); } a:hover { color: var(--color-accent-600); }
+    textarea::placeholder { color: var(--color-neutral-500); }
+  </style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+  <nav class="nav" style="padding:var(--space-3) var(--space-4);gap:var(--space-4)">
+    <a href="#" onClick="{{ goWrite }}" class="nav-brand" style="font-size:15px;text-decoration:none;color:inherit">Journal</a>
+    <a href="#" onClick="{{ goEntries }}" aria-current="{{ entriesCurrent }}" style="text-decoration:none;font-size:14px">Entries</a>
+    <sc-if value="{{ hasLookBackHistory }}" hint-placeholder-val="{{ false }}">
+      <a href="#" onClick="{{ goLookBack }}" aria-current="{{ lookbackCurrent }}" style="text-decoration:none;font-size:14px">Look back</a>
+    </sc-if>
+  </nav>
+
+  <main style="flex:1;width:100%;max-width:760px;padding:var(--space-8) var(--space-4) 120px;box-sizing:border-box;margin:0 auto">
+    <sc-if value="{{ hasStatus }}" hint-placeholder-val="{{ false }}">
+      <div style="font-size:12px;color:var(--color-neutral-600);margin:0 0 var(--space-4)">{{ statusText }}</div>
+    </sc-if>
+
+    <!-- WRITE / ENTRY -->
+    <sc-if value="{{ showEntry }}" hint-placeholder-val="{{ true }}">
+      <sc-if value="{{ isFirstUse }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-bottom:var(--space-8);max-width:560px;font-size:16px;line-height:1.6;text-wrap:pretty">
+          <sc-if value="{{ useDefaultFirstUse }}" hint-placeholder-val="{{ true }}">
+            <p>This is a journal for people who don't journal.</p>
+            <p>You don't need a prompt, a practice, or even a point.</p>
+            <p>Just write whatever is taking up space in your head. A sentence is enough. A page is fine too.</p>
+            <p>I won't automatically analyze what you write. If you want me involved, you can ask me to listen, reflect something back, challenge your thinking, or help you figure something out.</p>
+            <p>Just start writing.</p>
+          </sc-if>
+          <sc-if value="{{ useCustomFirstUse }}" hint-placeholder-val="{{ false }}">
+            <sc-for list="{{ firstUseLines }}" as="line" hint-placeholder-count="0"><p>{{ line }}</p></sc-for>
+          </sc-if>
+        </div>
+        <hr class="hr" style="margin:0 0 var(--space-6)">
+      </sc-if>
+
+      <h6 style="margin:0 0 var(--space-4);color:var(--color-neutral-700);font-weight:600">{{ currentDateLabel }}</h6>
+
+      <sc-if value="{{ currentEditable }}" hint-placeholder-val="{{ true }}">
+        <textarea value="{{ draft }}" onChange="{{ onDraft }}" placeholder="" aria-label="Journal entry" style="display:block;width:100%;min-height:38vh;padding:0;margin:0;border:0;outline:none;background:transparent;resize:none;font-family:var(--font-body);font-size:19px;line-height:1.6;color:var(--color-text);caret-color:var(--color-accent);field-sizing:content;box-sizing:border-box"></textarea>
+      </sc-if>
+      <sc-if value="{{ currentReadOnly }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:19px;line-height:1.6;white-space:pre-wrap;text-wrap:pretty;max-width:640px">{{ currentText }}</div>
+      </sc-if>
+
+      <!-- thread: user words stay large; journal replies are smaller and indented -->
+      <sc-for list="{{ thread }}" as="m" hint-placeholder-count="0">
+        <sc-if value="{{ m.isJournal }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:var(--space-6) 0 0 var(--space-6);max-width:520px">
+            <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:var(--space-1)">{{ m.mode }}</div>
+            <div style="font-size:14px;line-height:1.55;color:var(--color-neutral-800);text-wrap:pretty">{{ m.text }}</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ m.isYou }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:var(--space-6);font-size:19px;line-height:1.6;white-space:pre-wrap;max-width:640px">{{ m.text }}</div>
+        </sc-if>
+      </sc-for>
+
+      <sc-if value="{{ pending }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:var(--space-6) 0 0 var(--space-6);font-size:14px;color:var(--color-neutral-600)">…</div>
+      </sc-if>
+
+      <!-- natural-language invitation -->
+      <sc-if value="{{ showNlInvite }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:var(--space-6) 0 0 var(--space-6);font-size:14px;color:var(--color-neutral-800)">Sounds like you want me in this one. <a href="#" onClick="{{ nlPick }}" style="color:var(--color-accent-700)">{{ nlLabel }}</a></div>
+      </sc-if>
+
+      <!-- talk back affordance -->
+      <sc-if value="{{ showTalkBackLink }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:var(--space-6)">
+          <button class="btn btn-ghost" onClick="{{ openModes }}" style="margin-left:calc(var(--space-1) * -1)">{{ talkBackLabel }}</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showModes }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:var(--space-6);border-top:2px solid var(--color-divider);padding-top:var(--space-3);display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center">
+          <sc-for list="{{ modes }}" as="mode" hint-placeholder-count="3">
+            <button class="btn btn-secondary" onClick="{{ mode.pick }}" style="justify-content:flex-start">{{ mode.label }}</button>
+          </sc-for>
+          <button class="btn btn-ghost" onClick="{{ closeModes }}" style="color:var(--color-neutral-700)">Keep writing</button>
+        </div>
+      </sc-if>
+
+      <!-- continue the conversation -->
+      <sc-if value="{{ showReplyBox }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:var(--space-6) 0 0;max-width:640px">
+          <textarea class="input" value="{{ reply }}" onChange="{{ onReply }}" onKeyDown="{{ onReplyKey }}" placeholder="{{ replyPlaceholder }}" aria-label="Reply" style="min-height:44px;font-size:16px;background:transparent;border-color:var(--color-neutral-400);field-sizing:content;resize:none"></textarea>
+          <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);align-items:center">
+            <button class="btn btn-ghost" onClick="{{ sendReply }}" style="margin-left:calc(var(--space-1) * -1)">Send</button>
+            <button class="btn btn-ghost" onClick="{{ openModes }}" style="color:var(--color-neutral-700)">Change how you respond</button>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <!-- ENTRIES -->
+    <sc-if value="{{ showEntries }}" hint-placeholder-val="{{ false }}">
+      <h3 style="margin:0 0 var(--space-2)">Entries</h3>
+      <p class="text-muted" style="font-size:13px;margin:0 0 var(--space-6)">{{ entriesMeta }}</p>
+
+      <sc-if value="{{ showPreserveNudge }}" hint-placeholder-val="{{ false }}">
+        <div style="border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider);padding:var(--space-4) 0;margin-bottom:var(--space-6);max-width:560px">
+          <p style="font-size:15px;line-height:1.55;margin:0 0 var(--space-3);text-wrap:pretty">You've actually started building a journal here. If you think you'll keep using it, this is a good time to keep your original entries together somewhere private, so you can eventually look back for patterns. Want me to show you how?</p>
+          <div style="display:flex;gap:var(--space-2)">
+            <button class="btn btn-secondary" onClick="{{ preserveYes }}">Show me</button>
+            <button class="btn btn-ghost" onClick="{{ preserveNo }}" style="color:var(--color-neutral-700)">Not now</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showPreserveHow }}" hint-placeholder-val="{{ false }}">
+        <div style="border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider);padding:var(--space-4) 0;margin-bottom:var(--space-6);max-width:560px">
+          <p style="font-size:15px;line-height:1.55;margin:0 0 var(--space-3);text-wrap:pretty">Think of it as the bookshelf for your journal. Your original entries are the record; I help you read across them later. Nothing here gets replaced by a summary.</p>
+          <p style="font-size:15px;line-height:1.55;margin:0 0 var(--space-3)">Step one: name the shelf. Something like <em>Journal — Fall 2026</em> works. You can change it later.</p>
+          <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center">
+            <input class="input" value="{{ shelfName }}" onChange="{{ onShelf }}" aria-label="Journal name" style="max-width:280px;background:transparent">
+            <button class="btn btn-primary" onClick="{{ preserveDone }}" style="justify-content:flex-start">Keep it together</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showLookBackOffer }}" hint-placeholder-val="{{ false }}">
+        <div style="border-top:2px solid var(--color-divider);border-bottom:2px solid var(--color-divider);padding:var(--space-4) 0;margin-bottom:var(--space-6);max-width:560px">
+          <p style="font-size:15px;line-height:1.55;margin:0 0 var(--space-3);text-wrap:pretty">There's enough here now to look back across, if you ever want to. I'd stay close to your own words and say when I'm not sure.</p>
+          <div style="display:flex;gap:var(--space-2)">
+            <button class="btn btn-secondary" onClick="{{ lookBackYes }}">Look back</button>
+            <button class="btn btn-ghost" onClick="{{ lookBackNo }}" style="color:var(--color-neutral-700)">Not now</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="border-top:2px solid var(--color-divider)">
+        <sc-for list="{{ entryRows }}" as="e" hint-placeholder-count="6">
+          <a href="#" onClick="{{ e.open }}" style="display:grid;grid-template-columns:minmax(120px,160px) minmax(0,1fr);gap:var(--space-4);padding:var(--space-3) 0;border-bottom:1px solid var(--color-divider);text-decoration:none;color:inherit" style-hover="background:color-mix(in srgb, var(--color-text) 4%, transparent)">
+            <span style="font-size:13px;color:var(--color-neutral-700)">{{ e.dateShort }}</span>
+            <span style="min-width:0">
+              <span style="display:block;font-size:15px;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.excerpt }}</span>
+              <sc-if value="{{ e.talked }}" hint-placeholder-val="{{ false }}">
+                <span style="display:block;font-size:11px;color:var(--color-neutral-600);margin-top:2px">talked back</span>
+              </sc-if>
+            </span>
+          </a>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <!-- LOOK BACK -->
+    <sc-if value="{{ showLookBack }}" hint-placeholder-val="{{ false }}">
+      <h3 style="margin:0 0 var(--space-2)">Looking back</h3>
+      <p class="text-muted" style="font-size:13px;margin:0 0 var(--space-3)">{{ entriesMeta }}</p>
+      <p style="font-size:15px;max-width:560px;margin:0 0 var(--space-6);text-wrap:pretty;color:var(--color-neutral-800)">A few things I noticed reading across your entries. Every quote links back to the page it came from. Where the evidence is thin, I say so.</p>
+
+      <sc-if value="{{ lookbackLoading }}" hint-placeholder-val="{{ false }}">
+        <p style="font-size:14px;color:var(--color-neutral-600)">Reading across your entries…</p>
+      </sc-if>
+      <sc-if value="{{ hasLookbackMessage }}" hint-placeholder-val="{{ false }}">
+        <p style="font-size:16px;line-height:1.55;max-width:560px;margin:0 0 var(--space-6);text-wrap:pretty">{{ lookbackMessage }}</p>
+      </sc-if>
+      <div style="display:grid;gap:var(--space-4)">
+        <sc-for list="{{ observations }}" as="o" hint-placeholder-count="3">
+          <div class="card" style="padding:var(--space-4);gap:var(--space-3)">
+            <div class="card-kicker" style="color:var(--color-accent-700)">{{ o.kind }}</div>
+            <div style="font-size:16px;line-height:1.5;text-wrap:pretty;max-width:560px">{{ o.text }}</div>
+
+            <sc-if value="{{ o.isThenNow }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-4);border-top:1px solid var(--color-divider);padding-top:var(--space-3)">
+                <sc-for list="{{ o.quotes }}" as="q" hint-placeholder-count="2">
+                  <div style="min-width:0">
+                    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-600);margin-bottom:var(--space-1)">{{ q.label }}</div>
+                    <a href="#" onClick="{{ q.open }}" style="display:block;font-size:17px;line-height:1.45;color:var(--color-text);text-decoration-color:var(--color-accent)">“{{ q.text }}”</a>
+                    <div style="font-size:12px;color:var(--color-neutral-700);margin-top:var(--space-1)">{{ q.date }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ o.isList }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid;gap:var(--space-2);border-top:1px solid var(--color-divider);padding-top:var(--space-3)">
+                <sc-for list="{{ o.quotes }}" as="q" hint-placeholder-count="2">
+                  <div style="display:grid;grid-template-columns:minmax(72px,96px) minmax(0,1fr);gap:var(--space-3);align-items:baseline">
+                    <a href="#" onClick="{{ q.open }}" style="font-size:12px;color:var(--color-accent-700);text-decoration:none" style-hover="text-decoration:underline">{{ q.date }}</a>
+                    <a href="#" onClick="{{ q.open }}" style="font-size:15px;line-height:1.45;color:var(--color-text);text-decoration-color:var(--color-accent)">“{{ q.text }}”</a>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ o.hasNote }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-neutral-600)">{{ o.note }}</div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <hr class="hr" style="margin:var(--space-8) 0 var(--space-4)">
+      <sc-if value="{{ hasObservations }}" hint-placeholder-val="{{ true }}">
+        <p style="font-size:16px;margin:0 0 var(--space-4)">That's what I see in the record. What it means is yours.</p>
+      </sc-if>
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+        <button class="btn btn-secondary" onClick="{{ lookBackTalk }}">Talk about what I noticed</button>
+        <button class="btn btn-secondary" onClick="{{ lookBackChallenge }}">Challenge me on it</button>
+        <button class="btn btn-ghost" onClick="{{ goWrite }}" style="color:var(--color-neutral-700)">That's enough for now</button>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;modeCount&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 3, &quot;min&quot;: 1, &quot;max&quot;: 3, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Talk Back&quot;},
+  &quot;mode1&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Reflect&quot;, &quot;options&quot;: [&quot;Just listen&quot;,&quot;Reflect&quot;,&quot;Think it through&quot;,&quot;Challenge me&quot;,&quot;Figure out what I want&quot;,&quot;Help me decide&quot;,&quot;What to do&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Talk Back&quot;},
+  &quot;mode2&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Think it through&quot;, &quot;options&quot;: [&quot;Just listen&quot;,&quot;Reflect&quot;,&quot;Think it through&quot;,&quot;Challenge me&quot;,&quot;Figure out what I want&quot;,&quot;Help me decide&quot;,&quot;What to do&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Talk Back&quot;},
+  &quot;mode3&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Challenge me&quot;, &quot;options&quot;: [&quot;Just listen&quot;,&quot;Reflect&quot;,&quot;Think it through&quot;,&quot;Challenge me&quot;,&quot;Figure out what I want&quot;,&quot;Help me decide&quot;,&quot;What to do&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Talk Back&quot;},
+  &quot;naturalLanguageInvite&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Talk Back&quot;},
+  &quot;replyMaxSentences&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 3, &quot;min&quot;: 1, &quot;max&quot;: 6, &quot;step&quot;: 1, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Talk Back&quot;},
+  &quot;talkBackLabel&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Talk back&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Copy&quot;},
+  &quot;firstUseText&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Copy&quot;},
+  &quot;preserveAfter&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 4, &quot;min&quot;: 1, &quot;max&quot;: 20, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Thresholds&quot;},
+  &quot;lookBackAfter&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 6, &quot;min&quot;: 2, &quot;max&quot;: 30, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Thresholds&quot;},
+  &quot;evidenceStrictness&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Include possible patterns&quot;, &quot;options&quot;: [&quot;Observations only&quot;,&quot;Include possible patterns&quot;,&quot;Include interpretations&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Look Back&quot;}
+}">
+// ---------------------------------------------------------------------------
+// Wired to the Journal_AI backend (same origin). See docs/frontend_contract.md.
+// ---------------------------------------------------------------------------
+const API = (window.JOURNAL_API || "").replace(/\/$/, "");
+const UI_TO_MODE = { "Just listen": "listen", "Reflect": "reflect", "Think it through": "think", "Challenge me": "challenge",
+  "Figure out what I want": "want", "Help me decide": "decide", "What to do": "act" };
+const MODE_TO_UI = { listen: "Just listen", reflect: "Reflect", think: "Think it through", challenge: "Challenge me",
+  want: "Figure out what I want", decide: "Help me decide", act: "What to do", open: "Journal", write: "Journal",
+  space: "Journal", safety: "Journal", you_decide: "Journal" };
+const KIND_LABEL = { observation: "Observation", possible_pattern: "Possible pattern", interpretation: "Interpretation" };
+const NL = [
+  [/challenge me/i, "Challenge me"], [/(think (this|it) through|help me think)/i, "Think it through"],
+  [/(reflect|what do you (hear|notice))/i, "Reflect"], [/(help me decide|should i)/i, "Help me decide"],
+  [/(what (do )?i want)/i, "Figure out what I want"], [/what should i do|what do i do/i, "What to do"],
+  [/just listen/i, "Just listen"], [/you decide/i, "__decide"],
+];
+const fmtLong = d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+const fmtShort = d => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const pad = n => String(n).padStart(2, "0");
+const todayISO = () => { const d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+const nowLocalISO = () => { const d = new Date(); return todayISO() + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); };
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+                set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+function userId() {
+  let id = store.get("journal_user_id", null);
+  if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, ""); store.set("journal_user_id", id); }
+  return id;
+}
+async function api(method, path, body) {
+  const res = await fetch(API + path, { method, headers: { "content-type": "application/json", "X-User-Id": userId() },
+    body: body === undefined ? undefined : JSON.stringify(body) });
+  if (res.status === 204) return null;
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = { detail: text }; }
+  if (!res.ok) throw new Error((data && (data.detail && (data.detail[0]?.msg || data.detail))) || (method + " " + path + " → " + res.status));
+  return data;
+}
+const norm = t => String(t || "").replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim().replace(/^["'.…\s]+|["'.…\s]+$/g, "");
+
+// A "page" is one session: the first thing the user wrote plus the conversation under it.
+function pagesFromTranscripts(list) {
+  return list.map(pg => {
+    const you = pg.items.filter(i => i.who === "you");
+    const first = you[0];
+    const thread = pg.items.filter(i => i !== first).map(i => ({ who: i.who, text: i.text, mode: i.who === "journal" ? (MODE_TO_UI[i.mode] || "Journal") : undefined }));
+    const texts = {}; for (const i of you) texts[i.entry_id] = i.text;
+    return { id: pg.session_id, date: pg.date, text: first ? first.text : "", entryId: first ? first.entry_id : null,
+             volumeId: pg.volume_id, thread, closed: pg.closed, mode: pg.mode, texts,
+             entryIds: you.map(i => i.entry_id) };
+  }).filter(p => p.text.trim());
+}
+
+class Component extends DCLogic {
+  state = {
+    view: "write", currentId: "today", pages: [], draft: "", savedDraft: "", reply: "", modesOpen: false,
+    firstUseSeen: store.get("journal_first_use_seen", false),
+    preserve: store.get("journal_preserve", "unseen"), lookOffer: store.get("journal_lookoffer", "unseen"),
+    shelfName: "Journal — Fall 2026", volumeId: null,
+    pending: false, status: "", error: "", replyMode: null, replyPlaceholder: "Reply, or keep writing above.",
+    lookback: null, lookbackLoading: false,
+  };
+  componentDidMount() { this.refresh(); }
+
+  // ----------------------------------------------------------------- data
+  async refresh() {
+    try {
+      const [transcripts, volumes] = await Promise.all([api("GET", "/transcripts"), api("GET", "/volumes")]);
+      const pages = pagesFromTranscripts(transcripts);
+      const openVol = volumes.find(v => !v.closed_at) || volumes[volumes.length - 1];
+      const today = pages.find(p => p.date === todayISO() && !p.closed);
+      this.setState(s => ({ pages, volumeId: openVol ? openVol.id : null, shelfName: openVol ? openVol.title : s.shelfName,
+        draft: s.draft || (today ? today.text : ""), savedDraft: today ? today.text : "", error: "" }));
+    } catch (e) { this.setState({ error: String(e.message || e) }); }
+  }
+  todayPage() { return this.state.pages.find(p => p.date === todayISO() && !p.closed) || null; }
+  current() {
+    const s = this.state;
+    if (s.currentId === "today") return this.todayPage() || { id: "today", date: todayISO(), text: s.draft, thread: [], entryId: null };
+    return s.pages.find(p => p.id === s.currentId) || this.todayPage() || { id: "today", date: todayISO(), text: s.draft, thread: [], entryId: null };
+  }
+  /** Persist today's draft: a new entry, or a superseding version if the page already exists and changed. */
+  async saveDraft(intent) {
+    const s = this.state, t = s.draft.trim();
+    const today = this.todayPage();
+    if (!t) return today;
+    if (today && today.text === s.draft) return today;
+    if (!today && !t) return null;
+    const body = { body: s.draft, created_at_local: nowLocalISO(), tz: TZ, intent: intent || "write" };
+    if (today) { body.supersedes_entry_id = today.entryId; body.session_id = today.id; }
+    this.setState({ status: "saving…" });
+    const out = await api("POST", "/entries", body);
+    store.set("journal_first_use_seen", true);
+    this.setState({ firstUseSeen: true, status: "" });
+    await this.refresh();
+    if (out.ai_turn && out.ai_turn.body) {
+      // a short write-mode acknowledgement from the journal; it appears in the thread via refresh
+    }
+    return this.todayPage() || { id: out.session_id, entryId: out.entry.id, date: todayISO(), text: s.draft, thread: [] };
+  }
+  scheduleAutosave() {
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.saveDraft().catch(e => this.setState({ error: String(e.message || e) })), 8000);
+  }
+  async nav(view, currentId) {
+    clearTimeout(this._t);
+    try { await this.saveDraft(); } catch (e) { this.setState({ error: String(e.message || e) }); }
+    this.setState(s => ({ view, currentId: currentId ?? s.currentId, modesOpen: false, error: "" }));
+    if (view === "lookback") this.runLookBack();
+  }
+
+  // ----------------------------------------------------------------- talk back
+  async pickMode(label) {
+    this.setState({ modesOpen: false, pending: true, error: "" });
+    try {
+      let page = this.current();
+      const tp = this.todayPage();
+      if (page.id === "today" || (tp && page.id === tp.id)) page = (await this.saveDraft("write")) || page;
+      if (!page || !page.entryId) throw new Error("Write something first.");
+      const body = label === "__decide" ? { intent: "you_decide" } : { mode: UI_TO_MODE[label] || "reflect" };
+      const out = await api("POST", "/entries/" + page.entryId + "/respond", body);
+      await this.refresh();
+      this.setState({ pending: false, currentId: this.state.currentId === "today" ? "today" : page.id, replyMode: null,
+                      status: out.path === "safety" ? "" : "" });
+    } catch (e) { this.setState({ pending: false, error: String(e.message || e) }); }
+  }
+  async sendReply() {
+    const s = this.state, t = s.reply.trim(); if (!t) return;
+    let page = this.current();
+    this.setState({ reply: "", pending: true, error: "" });
+    try {
+      const tp = this.todayPage();
+      if (page.id === "today" || (tp && page.id === tp.id)) page = (await this.saveDraft("write")) || page;
+      if (!page || !page.id || page.id === "today") {
+        // nothing written yet: the reply itself becomes the first entry of a talk session
+        const out = await api("POST", "/entries", { body: t, created_at_local: nowLocalISO(), tz: TZ, intent: "talk", mode: s.replyMode ? UI_TO_MODE[s.replyMode] : null });
+        await this.refresh();
+        this.setState({ pending: false, currentId: out.session_id, replyMode: null, replyPlaceholder: "Reply, or keep writing above." });
+        return;
+      }
+      const body = { message: t, created_at_local: nowLocalISO(), tz: TZ };
+      if (s.replyMode) body.mode = UI_TO_MODE[s.replyMode];
+      await api("POST", "/sessions/" + page.id + "/turns?stream=false", body);
+      await this.refresh();
+      this.setState({ pending: false, replyMode: null, replyPlaceholder: "Reply, or keep writing above." });
+    } catch (e) { this.setState({ pending: false, error: String(e.message || e) }); }
+  }
+
+  // ----------------------------------------------------------------- look back
+  async runLookBack() {
+    this.setState({ lookbackLoading: true, error: "" });
+    try {
+      const out = await api("POST", "/lookback", {});
+      this.setState({ lookback: out, lookbackLoading: false, lookOffer: "seen" });
+      store.set("journal_lookoffer", "seen");
+    } catch (e) { this.setState({ lookbackLoading: false, error: String(e.message || e) }); }
+  }
+  observationsFromReport(rep, open) {
+    if (!rep) return [];
+    const s = this.state;
+    const pageOf = {}; for (const p of s.pages) for (const eid of (p.entryIds || [])) pageOf[eid] = p;
+    const entryText = {}; // entry id -> the user's text, from pages
+    for (const p of s.pages) Object.assign(entryText, p.texts || {});
+    const strict = this.props.evidenceStrictness ?? "Include possible patterns";
+    const level = { "Observations only": 0, "Include possible patterns": 1, "Include interpretations": 2 }[strict] ?? 1;
+    const lvl = { observation: 0, possible_pattern: 1, interpretation: 2 };
+    return rep.observations.filter(o => (lvl[o.kind] ?? 0) <= level).map(o => {
+      const tn = (o.claims || []).find(c => c.type === "then_now" || c.type === "first_last");
+      const quoteFor = (q, i) => {
+        // find which cited entry carries this quote; fall back to positional order
+        let eid = o.entry_ids.find(id => norm(entryText[id] || "").includes(norm(q)));
+        if (!eid && tn && Array.isArray(tn.asserted)) eid = tn.asserted[i];
+        if (!eid) eid = o.entry_ids[Math.min(i, o.entry_ids.length - 1)];
+        const pg = pageOf[eid];
+        return { text: q, date: pg ? fmtShort(pg.date) + (pg.date.slice(0, 4) !== todayISO().slice(0, 4) ? ", " + pg.date.slice(0, 4) : "") : "",
+                 open: pg ? open(pg.id) : (ev => ev.preventDefault()), label: tn ? (i === 0 ? "Then" : "Now") : "" };
+      };
+      const quotes = (o.quotes || []).map(quoteFor);
+      const isThenNow = !!tn && quotes.length >= 2;
+      return { kind: tn ? "Then vs. now" : (KIND_LABEL[o.kind] || "Observation"), text: o.text, quotes,
+               isThenNow, isList: !isThenNow, hasNote: !!o.label, note: o.label };
+    });
+  }
+
+  // ----------------------------------------------------------------- render
+  renderVals() {
+    const s = this.state, p = this.props;
+    const cur = this.current();
+    const tp = this.todayPage();
+    const isToday = cur.id === "today" || (!!tp && cur.id === tp.id);
+    const text = isToday ? s.draft : cur.text;
+    const modeCount = Math.min(3, Math.max(1, Number(p.modeCount ?? 3)));
+    const modes = [p.mode1 ?? "Reflect", p.mode2 ?? "Think it through", p.mode3 ?? "Challenge me"].slice(0, modeCount)
+      .map(label => ({ label, pick: ev => { ev.preventDefault(); this.pickMode(label); } }));
+    const talked = cur.thread.some(m => m.who === "journal");
+    let nlMode = null;
+    if ((p.naturalLanguageInvite ?? true) && isToday && !talked && !s.modesOpen) {
+      const tail = s.draft.slice(-240);
+      for (const [re, m] of NL) if (re.test(tail)) { nlMode = m; break; }
+    }
+    const nlLabel = nlMode === "__decide" ? "I'll pick." : nlMode ? nlMode + "?" : "";
+    const nlPick = ev => { ev.preventDefault(); this.pickMode(nlMode); };
+
+    const pages = s.pages;
+    const dated = pages.map(e => e.date).sort();
+    const monthRange = dated.length ? new Date(dated[0] + "T12:00:00").toLocaleDateString("en-US", { month: "long" }) + " – " + new Date(dated[dated.length - 1] + "T12:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "";
+    const preserveAfter = Number(p.preserveAfter ?? 4), lookBackAfter = Number(p.lookBackAfter ?? 6);
+    const hasLookBackHistory = pages.length >= lookBackAfter;
+    const open = id => ev => { ev.preventDefault(); this.nav("entry", id); };
+    const observations = this.observationsFromReport(s.lookback, open);
+    const rep = s.lookback;
+    const lookbackMessage = rep ? (rep.outcome === "fallback" ? rep.message : (rep.message && observations.length === 0 ? rep.message : "")) : "";
+    const firstUseLines = String(p.firstUseText ?? "").split("\n").map(l => l.trim()).filter(Boolean);
+    const rows = [...pages].sort((a, b) => b.date.localeCompare(a.date)).map(e => ({
+      dateShort: fmtShort(e.date) + (e.date.slice(0, 4) !== todayISO().slice(0, 4) ? ", " + e.date.slice(0, 4) : ""),
+      excerpt: e.text.trim().split("\n")[0], talked: e.thread.some(m => m.who === "journal"), open: open(e.id),
+    }));
+    const stop = f => ev => { ev && ev.preventDefault && ev.preventDefault(); f(); };
+    const basedOn = rep && rep.based_on ? rep.based_on.entry_count + " entries read" : "";
+    return {
+      goWrite: stop(() => this.nav("write", "today")), goEntries: stop(() => this.nav("entries")), goLookBack: stop(() => this.nav("lookback")),
+      entriesCurrent: s.view === "entries" ? "page" : undefined, lookbackCurrent: s.view === "lookback" ? "page" : undefined,
+      hasLookBackHistory,
+      hasStatus: !!(s.error || s.status), statusText: s.error || s.status,
+      showEntry: s.view === "write" || s.view === "entry", showEntries: s.view === "entries", showLookBack: s.view === "lookback",
+      isFirstUse: !s.firstUseSeen && pages.length === 0 && isToday && s.view === "write",
+      useDefaultFirstUse: firstUseLines.length === 0, useCustomFirstUse: firstUseLines.length > 0, firstUseLines,
+      currentDateLabel: fmtLong(cur.date), currentEditable: !!isToday, currentReadOnly: !isToday, currentText: cur.text,
+      draft: s.draft, onDraft: ev => { this.setState({ draft: ev.target.value }); this.scheduleAutosave(); },
+      thread: cur.thread.map(m => ({ ...m, isJournal: m.who === "journal", isYou: m.who === "you" })),
+      pending: s.pending,
+      showNlInvite: !!nlMode, nlLabel, nlPick,
+      showTalkBackLink: text.trim().length > 0 && !s.modesOpen && !talked && !nlMode && !s.pending,
+      showModes: s.modesOpen, modes, talkBackLabel: p.talkBackLabel ?? "Talk back",
+      openModes: stop(() => this.setState({ modesOpen: true })), closeModes: stop(() => this.setState({ modesOpen: false })),
+      showReplyBox: (talked || !!s.replyMode) && !s.modesOpen, reply: s.reply, onReply: ev => this.setState({ reply: ev.target.value }),
+      replyPlaceholder: s.replyPlaceholder,
+      onReplyKey: ev => { if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); this.sendReply(); } }, sendReply: stop(() => this.sendReply()),
+      entriesMeta: pages.length + " entries" + (monthRange ? " · " + monthRange : "") + (s.view === "lookback" && basedOn ? " · " + basedOn : ""), entryRows: rows,
+      showPreserveNudge: s.view === "entries" && s.preserve === "unseen" && pages.length >= preserveAfter,
+      showPreserveHow: s.preserve === "how",
+      preserveYes: stop(() => this.setState({ preserve: "how" })),
+      preserveNo: stop(() => { this.setState({ preserve: "declined" }); store.set("journal_preserve", "declined"); api("POST", "/events/preservation-declined").catch(() => {}); }),
+      preserveDone: stop(async () => {
+        try { if (s.volumeId) await api("PATCH", "/volumes/" + s.volumeId, { title: s.shelfName }); } catch (e) { this.setState({ error: String(e.message || e) }); }
+        this.setState({ preserve: "done" }); store.set("journal_preserve", "done");
+      }),
+      shelfName: s.shelfName, onShelf: ev => this.setState({ shelfName: ev.target.value }),
+      showLookBackOffer: s.view === "entries" && s.lookOffer === "unseen" && hasLookBackHistory && s.preserve !== "unseen" && s.preserve !== "how",
+      lookBackYes: stop(() => { this.nav("lookback"); }), lookBackNo: stop(() => { this.setState({ lookOffer: "seen" }); store.set("journal_lookoffer", "seen"); }),
+      observations, hasObservations: observations.length > 0, lookbackLoading: s.lookbackLoading,
+      hasLookbackMessage: !!lookbackMessage, lookbackMessage,
+      lookBackTalk: stop(() => { this.setState({ replyMode: "Reflect", replyPlaceholder: "Which of those stayed with you? Start there." }); this.nav("write", "today"); }),
+      lookBackChallenge: stop(() => { this.setState({ replyMode: "Challenge me", replyPlaceholder: "Which one did the journal get wrong, and what did it miss?" }); this.nav("write", "today"); }),
+    };
+  }
+}
+</script>
+</body>
+</html>

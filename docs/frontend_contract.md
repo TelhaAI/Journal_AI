@@ -98,7 +98,14 @@ below `quoted` is ever returned. Show "based on N entries" from `based_on.entry_
 `GET /lookback/{id}/receipt` returns the full re-executable receipt; `POST /lookback/{id}/replay`
 re-runs the gate and reports whether the verdicts reproduce.
 
-## 6. Other endpoints
+## 6. UI conveniences
+
+- `POST /entries/{id}/respond` `{ "mode": "challenge" }` or `{ "intent": "you_decide" }` — talk back on a page
+  that is already saved without creating a new entry.
+- `GET /transcripts` — one item per session/page: `{session_id, date, items: [{who: "you"|"journal", text, mode, entry_id|turn_id, at}], talked, closed}`.
+- Replying under a closed page reopens its session.
+
+## 7. Other endpoints
 
 | Method | Path | Notes |
 |---|---|---|

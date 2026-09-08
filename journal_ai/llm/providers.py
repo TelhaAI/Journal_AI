@@ -75,9 +75,9 @@ class AnthropicProvider(LLMProvider):
     async def generate(self, system, messages, *, model=None, max_tokens=600, temperature=0.7) -> GenerateResult:
         done = self._timer()
         resp = await self.client.messages.create(
-            model=model or self.model, max_tokens=max_tokens, temperature=temperature,
-            system=self._join_system(system),
+            model=model or self.model, max_tokens=max_tokens, system=self._join_system(system),
             messages=[{"role": m.role, "content": m.content} for m in messages],
+            extra_body={"temperature": temperature},  # SDK ≥1.x moved sampling params; the API still accepts it
         )
         text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
         return GenerateResult(text=text, model=resp.model, input_tokens=resp.usage.input_tokens,
@@ -85,9 +85,9 @@ class AnthropicProvider(LLMProvider):
 
     async def stream(self, system, messages, *, model=None, max_tokens=600, temperature=0.7) -> AsyncIterator[str]:
         async with self.client.messages.stream(
-            model=model or self.model, max_tokens=max_tokens, temperature=temperature,
-            system=self._join_system(system),
+            model=model or self.model, max_tokens=max_tokens, system=self._join_system(system),
             messages=[{"role": m.role, "content": m.content} for m in messages],
+            extra_body={"temperature": temperature},
         ) as s:
             async for chunk in s.text_stream:
                 yield chunk

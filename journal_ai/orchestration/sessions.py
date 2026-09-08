@@ -77,7 +77,8 @@ def close_session(db: Session, session: JournalSession, now: datetime | None = N
 
 
 def get_or_open_session(db: Session, user_id: str, volume: Volume, now: datetime | None = None,
-                        session_id: str | None = None) -> JournalSession:
+                        session_id: str | None = None, local_date: str | None = None) -> JournalSession:
+    """A session is one page: continuous activity (inactivity timeout) on one local date in one volume."""
     now = _now(now)
     s = get_settings()
     if session_id:
@@ -91,11 +92,13 @@ def get_or_open_session(db: Session, user_id: str, volume: Volume, now: datetime
     open_sessions = db.scalars(select(JournalSession).where(
         JournalSession.user_id == user_id, JournalSession.closed_at.is_(None))).all()
     for os_ in open_sessions:
-        if now - _aware(os_.last_activity_at) <= timedelta(minutes=s.session_inactivity_minutes) and os_.volume_id == volume.id:
+        same_day = local_date is None or os_.local_date is None or os_.local_date == local_date
+        if (now - _aware(os_.last_activity_at) <= timedelta(minutes=s.session_inactivity_minutes)
+                and os_.volume_id == volume.id and same_day):
             os_.last_activity_at = now
             return os_
         close_session(db, os_, now)
-    sess = JournalSession(user_id=user_id, volume_id=volume.id, started_at=now, last_activity_at=now)
+    sess = JournalSession(user_id=user_id, volume_id=volume.id, started_at=now, last_activity_at=now, local_date=local_date)
     sess.preservation_pending = preservation_due(db, user_id)
     sess.rollover_pending = bool(volume.rollover_suggested) and not _has_event(db, user_id, "volume_rollover_served")
     db.add(sess)

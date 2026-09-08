@@ -14,7 +14,7 @@ from enum import IntEnum
 
 from ..lookback.evidence import EntryView, count_occurrences, first_last, last_third_count, normalize_ws
 
-GATE_VERSION = "pg-1.0.0"
+GATE_VERSION = "pg-1.0.1"
 
 HEDGE_PHRASE = "caught my attention, not a pattern yet"
 HEDGE_PATTERNS = [r"caught my attention", r"not a pattern yet", r"not enough", r"\btwice\b", r"only once",
@@ -99,6 +99,8 @@ class ProvenanceGate:
         checks: list[dict] = []
         text = str(obs.get("text", "") or "")
         kind_in = str(obs.get("kind", "observation") or "observation")
+        if kind_in not in ("observation", "possible_pattern", "interpretation"):
+            kind_in = "observation"  # unknown kinds are treated as the weakest claim
         entry_ids = [str(x) for x in (obs.get("entry_ids") or [])]
         quotes = [str(q) for q in (obs.get("quotes") or []) if str(q).strip()]
         claims = [c for c in (obs.get("claims") or []) if isinstance(c, dict)]

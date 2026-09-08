@@ -85,6 +85,18 @@ class TurnIn(BaseModel):
         return v
 
 
+class RespondIn(BaseModel):
+    mode: str | None = None
+    intent: Literal["talk", "you_decide"] = "talk"
+
+    @field_validator("mode")
+    @classmethod
+    def _mode(cls, v):
+        if v is not None and v not in MODES:
+            raise ValueError(f"mode must be one of {MODES}")
+        return v
+
+
 class ModeIn(BaseModel):
     mode: str
 

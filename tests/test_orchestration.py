@@ -268,7 +268,7 @@ def test_prompt_assembly_order_and_context(client, provider):
     provider.push("Ok.")
     out = _post(client, "Now talk. " + LONG, intent="talk", mode="reflect")
     blocks = provider.calls[-1]["system"]
-    assert blocks[0].startswith("You are a journal")             # master instructions verbatim, first
+    assert "You are an interactive journal" in blocks[0]          # Section 3 master instructions verbatim, first
     assert blocks[1].startswith("Mode: REFLECT")                   # mode addendum
     assert any(b.startswith("CONTEXT") and "sister and the house" in b for b in blocks)  # full text, not summary
     assert any("first time in this session" in b for b in blocks)  # first_talk once
