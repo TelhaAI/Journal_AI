@@ -1,0 +1,41 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  layer1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+      - run: python -m evals.run_layer2 --dry-run --n 2
+      - run: python -m evals.run_layer3 --dry-run --corpora 5
+  layer2-3-on-prompt-change:
+    # Section 12: behavioral evals run automatically when prompt_versions (prompts/) changes.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: layer1
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: changed
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q '^prompts/'; then echo "prompts=true" >> $GITHUB_OUTPUT; fi
+      - uses: actions/setup-python@v5
+        if: steps.changed.outputs.prompts == 'true'
+        with: { python-version: "3.11" }
+      - if: steps.changed.outputs.prompts == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          JOURNAL_LLM_PROVIDER: anthropic
+        run: |
+          pip install -e ".[dev,anthropic]"
+          python -m evals.run_layer2 --n 10 --judge
+          python -m evals.run_layer3 --corpora 20
+      - uses: actions/upload-artifact@v4
+        if: steps.changed.outputs.prompts == 'true'
+        with: { name: eval-reports, path: evals/reports/ }
