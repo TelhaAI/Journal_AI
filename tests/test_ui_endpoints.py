@@ -57,3 +57,16 @@ def test_frontend_served(client):
     r = client.get("/app/")
     assert r.status_code == 200 and "<x-dc>" in r.text
     assert client.get("/health").json()["secrets"] is not None
+
+
+def test_tester_passcode_gate(settings, app, provider):
+    from fastapi.testclient import TestClient
+
+    settings.tester_passcode = "letmein"
+    with TestClient(app) as c:
+        c.headers.update({"X-User-Id": "t1"})
+        r = c.get("/entries")
+        assert r.status_code == 401 and r.json()["detail"] == "tester_code_required"
+        assert c.get("/health").status_code == 200  # health stays open for the platform's checks
+        c.headers.update({"X-Tester-Code": "letmein"})
+        assert c.get("/entries").status_code == 200

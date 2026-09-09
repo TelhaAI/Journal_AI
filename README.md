@@ -88,6 +88,13 @@ Set `JOURNAL_ENCRYPTION_KEY` (a Fernet key: `python -c "from cryptography.fernet
 `entries.body` and `ai_turns.body` are then Fernet-encrypted in the database; export still returns
 the exact original. `/health` reports `encryption_at_rest` so the tester data statement stays true (I7).
 
+## Deploying for testers
+
+One container (Dockerfile) with SQLite on a persistent disk or Postgres. `render.yaml` gives a
+one-click Render blueprint; `fly.toml` covers Fly.io. Set `JOURNAL_TESTER_PASSCODE` so only invited
+testers can use it, and send each tester `https://<host>/app/?u=<their-handle>`. Full steps in
+`docs/deploy.md`.
+
 ## Running the evals
 
 Layer 1 (`pytest`) is deterministic and runs in CI on every change. Layers 2 and 3 need a model

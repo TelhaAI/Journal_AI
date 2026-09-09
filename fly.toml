@@ -1,0 +1,30 @@
+# Fly.io: fly launch --copy-config --no-deploy && fly volumes create journal_data --size 1 \
+#   && fly secrets set ANTHROPIC_API_KEY=... JOURNAL_TESTER_PASSCODE=... JOURNAL_ENCRYPTION_KEY=... JOURNAL_ADMIN_TOKEN=... \
+#   && fly deploy
+app = "journal-ai"
+primary_region = "ord"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  JOURNAL_LLM_PROVIDER = "anthropic"
+  JOURNAL_LLM_MODEL = "claude-sonnet-4-5"
+  JOURNAL_DATABASE_URL = "sqlite:////data/journal.db"
+  PORT = "8000"
+
+[[mounts]]
+  source = "journal_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[http_service.checks]]
+  path = "/health"
+  interval = "30s"
+  timeout = "5s"

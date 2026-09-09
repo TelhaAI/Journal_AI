@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     # V1: the frontend supplies a stable user id in X-User-Id. Swap the dependency in auth.py
     # when the frontend team picks a real auth scheme. Admin endpoints need X-Admin-Token.
     admin_token: str | None = None
+    # Shared passcode for invited testers (hosted deployments). When set, every API call must carry
+    # X-Tester-Code; the app asks for it once and remembers it in the browser. Empty = open.
+    tester_passcode: str | None = None
 
 
 @lru_cache
@@ -76,6 +79,8 @@ def get_settings() -> Settings:
             s.llm_provider = "scripted"
     if s.admin_token is None and os.environ.get("JOURNAL_ADMIN_TOKEN"):
         s.admin_token = os.environ["JOURNAL_ADMIN_TOKEN"]
+    if s.tester_passcode is None and os.environ.get("JOURNAL_TESTER_PASSCODE"):
+        s.tester_passcode = os.environ["JOURNAL_TESTER_PASSCODE"]
     if s.encryption_key is None and os.environ.get("JOURNAL_ENCRYPTION_KEY"):
         s.encryption_key = os.environ["JOURNAL_ENCRYPTION_KEY"]
     return s

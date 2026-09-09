@@ -23,6 +23,7 @@ FOLDER_TO_ENV = {
     "openai_api_key": "OPENAI_API_KEY",
     "admin_token": "JOURNAL_ADMIN_TOKEN",
     "encryption_key": "JOURNAL_ENCRYPTION_KEY",
+    "tester_passcode": "JOURNAL_TESTER_PASSCODE",
 }
 
 

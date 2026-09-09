@@ -1,0 +1,29 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Deploy: New + → Blueprint → pick this repo. Then set the two sync:false secrets in the dashboard.
+services:
+  - type: web
+    name: journal-ai
+    runtime: docker
+    plan: starter            # persistent disks need a paid instance; free tier has no disk
+    region: ohio
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: journal-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # paste in the dashboard; never commit
+      - key: JOURNAL_TESTER_PASSCODE
+        sync: false          # the code you give testers
+      - key: JOURNAL_ENCRYPTION_KEY
+        generateValue: true  # Fernet-compatible 32-byte secret is derived from this value
+      - key: JOURNAL_ADMIN_TOKEN
+        generateValue: true
+      - key: JOURNAL_LLM_PROVIDER
+        value: anthropic
+      - key: JOURNAL_LLM_MODEL
+        value: claude-sonnet-4-5
+      - key: JOURNAL_DATABASE_URL
+        value: sqlite:////data/journal.db

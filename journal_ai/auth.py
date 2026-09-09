@@ -23,7 +23,11 @@ def get_db() -> Iterator[Session]:
         db.close()
 
 
-def current_user(x_user_id: str | None = Header(default=None)) -> str:
+def current_user(x_user_id: str | None = Header(default=None),
+                 x_tester_code: str | None = Header(default=None)) -> str:
+    expected = get_settings().tester_passcode
+    if expected and x_tester_code != expected:
+        raise HTTPException(status_code=401, detail="tester_code_required")
     if not x_user_id or len(x_user_id) > 64:
         raise HTTPException(status_code=401, detail="X-User-Id header required")
     return x_user_id
