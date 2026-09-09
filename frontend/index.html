@@ -340,12 +340,22 @@ class Component extends DCLogic {
     const W = this.welcomeText();
     this.setState({ twLen: 0, twDone: false });
     let pause = 0;
+    const finish = () => {
+      clearInterval(this._tw);
+      document.removeEventListener("keydown", finish); document.removeEventListener("pointerdown", finish);
+      this.setState({ twLen: W.length, twDone: true });
+      setTimeout(() => this.draftRef.current && this.draftRef.current.focus(), 300);
+    };
+    // Any click or keypress skips straight to the page; background-tab timer throttling never blocks writing.
+    document.addEventListener("keydown", finish); document.addEventListener("pointerdown", finish);
+    this._twStart = Date.now();
     this._tw = setInterval(() => {
+      if (Date.now() - this._twStart > 20000) return finish();
       if (pause > 0) { pause--; return; }
       this.setState(s => {
         const n = s.twLen + 1, ch = W[s.twLen];
         if (ch === "\n") pause = 8; else if (/[.,]/.test(ch)) pause = 5;
-        if (n >= W.length) { clearInterval(this._tw); setTimeout(() => { this.setState({ twDone: true }); setTimeout(() => this.draftRef.current && this.draftRef.current.focus(), 700); }, 600); }
+        if (n >= W.length) { clearInterval(this._tw); setTimeout(finish, 600); }
         return { twLen: n };
       });
     }, 22);
